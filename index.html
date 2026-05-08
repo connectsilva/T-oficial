@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Capoeira Control Pro v3.1 - Full</title>
 
-    <!-- Link para o Manifesto -->
     <link rel="manifest" href="manifest.json">
-    <!-- Cor da barra de status no mobile -->
     <meta name="theme-color" content="#00c853">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <script>
-      // Registro do Service Worker
       if ('service-worker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('sw.js')
@@ -103,7 +100,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginBox">
     <div class="login-card">
         <img id="loginLogoImg" class="login-logo" src="https://via.placeholder.com/80">
@@ -125,7 +121,6 @@
     </div>
 </div>
 
-<!-- CONFIGURAÇÕES -->
 <div id="configMenu">
     <div class="config-container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
@@ -170,7 +165,7 @@
 
         <div id="setMsg" style="display:none">
             <label>Template WhatsApp</label>
-            <textarea id="cfgMsg" rows="8"></textarea>
+            <textarea id="cfgMsg" rows="12"></textarea>
             <button class="btn" style="width:100%; margin-top:15px" onclick="salvarConfig()">💾 SALVAR MENSAGEM</button>
         </div>
 
@@ -180,7 +175,6 @@
     </div>
 </div>
 
-<!-- APP PRINCIPAL -->
 <div class="container" id="mainApp">
     <div class="header-academia">
         <img id="logoTopo" class="logo-academia" src="https://via.placeholder.com/80">
@@ -198,12 +192,9 @@
             <b id="tituloForm">➕ NOVO ALUNO</b><b id="iconForm">+</b>
         </div>
         <div id="formCadastro" class="acordeon-content">
-            <!-- ID OCULTO PARA EDIÇÃO -->
             <input type="hidden" id="editIndex" value="-1">
-            
             <div class="photo-upload" onclick="$('alunoFileFoto').click()"><img id="alunoFotoPreview" src="https://via.placeholder.com/80"></div>
             <input type="file" id="alunoFileFoto" hidden onchange="previewImg(this, 'alunoFotoPreview')">
-            
             <label>Nome</label><input id="nome">
             <label>Apelido</label><input id="apelido">
             <label>WhatsApp</label><input id="tel" type="tel">
@@ -232,23 +223,34 @@
 <script>
     const $ = id => document.getElementById(id);
 
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyAifUhJB6krANoJhGSI-CBYOCElm-QLa1Y",
-  authDomain: "capoeira-oficial-b7421.firebaseapp.com",
-  databaseURL: "https://capoeira-oficial-b7421-default-rtdb.firebaseio.com",
-  projectId: "capoeira-oficial-b7421",
-  storageBucket: "capoeira-oficial-b7421.firebasestorage.app",
-  messagingSenderId: "1020091949434",
-  appId: "1:1020091949434:web:6a1bc84179c9f99a76b6c3",
-  measurementId: "G-ZCCXZ44Q50"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyAifUhJB6krANoJhGSI-CBYOCElm-QLa1Y",
+      authDomain: "capoeira-oficial-b7421.firebaseapp.com",
+      databaseURL: "https://capoeira-oficial-b7421-default-rtdb.firebaseio.com",
+      projectId: "capoeira-oficial-b7421",
+      storageBucket: "capoeira-oficial-b7421.firebasestorage.app",
+      messagingSenderId: "1020091949434",
+      appId: "1:1020091949434:web:6a1bc84179c9f99a76b6c3",
+      measurementId: "G-ZCCXZ44Q50"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
     let alunos = [];
-    let config = { nome: "Academia Capoeira", prof: "Professor", pix: "", logo: "https://via.placeholder.com/80", msg: "Olá [nome]!" };
+    
+    // MENSAGEM PADRÃO DE FÁBRICA ATUALIZADA
+    const MENSAGEM_PADRAO = "Olá, [nome]! 👋\nTudo bem?\n\nIdentificamos que sua mensalidade ainda está em aberto. Seguem os detalhes:\n\n📆 Vencimento: [data]\n💰 Valor: R$ [valor]\n🔑 Chave Pix para pagamento: [pix]\n\nCaso já tenha realizado o pagamento, por favor desconsidere esta mensagem.\n\nSe precisar de qualquer ajuda ou tiver alguma dúvida, estou à disposição 🙂";
+
+    let config = { 
+        nome: "Academia Capoeira", 
+        prof: "Professor", 
+        pix: "", 
+        logo: "https://via.placeholder.com/80", 
+        msg: MENSAGEM_PADRAO 
+    };
+
     let abaAtual = 'atrasado';
 
     window.onload = () => {
@@ -256,10 +258,8 @@ const firebaseConfig = {
             $("loginBox").style.display = "flex";
             $("mainApp").style.display = "none";
         });
-
         const email = localStorage.getItem("capoeira_email");
         if(email) { $("lUser").value = email; $("lRemember").checked = true; }
-        
         const cached = localStorage.getItem("capoeira_config");
         if(cached) {
             const c = JSON.parse(cached);
@@ -280,14 +280,8 @@ const firebaseConfig = {
     }
 
     auth.onAuthStateChanged(user => {
-        if(user) { 
-            $("loginBox").style.display="none"; 
-            $("mainApp").style.display="block"; 
-            carregarDados(); 
-        } else { 
-            $("loginBox").style.display="flex"; 
-            $("mainApp").style.display="none"; 
-        }
+        if(user) { $("loginBox").style.display="none"; $("mainApp").style.display="block"; carregarDados(); }
+        else { $("loginBox").style.display="flex"; $("mainApp").style.display="none"; }
     });
 
     function trocarAba(aba) {
@@ -308,6 +302,9 @@ const firebaseConfig = {
             const d = doc.data();
             alunos = d.alunos || [];
             config = d.config || config;
+            // Garante que se a mensagem estiver vazia no banco, use o novo padrão
+            if(!config.msg || config.msg.trim() === "") config.msg = MENSAGEM_PADRAO;
+            
             localStorage.setItem("capoeira_config", JSON.stringify(config));
             aplicarConfig();
             render();
@@ -342,12 +339,7 @@ const firebaseConfig = {
             const atr = a.parcelas.filter(p => !p.pago && parse(p.data) < hoje);
             const pen = a.parcelas.filter(p => !p.pago && parse(p.data) >= hoje);
             const pag = a.parcelas.filter(p => p.pago);
-            
-            if(atr.length > 0) {
-                totalAtrasos += atr.length;
-                totalAlunosInadimplentes++; 
-            }
-
+            if(atr.length > 0) { totalAtrasos += atr.length; totalAlunosInadimplentes++; }
             if (busca && !a.nome.toLowerCase().includes(busca) && !a.apelido.toLowerCase().includes(busca)) return;
             let exibir = abaAtual === 'atrasado' ? atr : (abaAtual === 'pendente' ? pen : pag);
 
@@ -377,7 +369,6 @@ const firebaseConfig = {
                 </div>`;
             }
         });
-        
         $("dAlunos").innerText = alunos.length;
         $("dAtraso").innerText = totalAtrasos;
         const perc = alunos.length > 0 ? ((totalAlunosInadimplentes / alunos.length) * 100).toFixed(1) : 0;
@@ -396,19 +387,13 @@ const firebaseConfig = {
         $("tituloForm").innerText = "✏️ EDITAR ALUNO";
         $("btnCadastrar").innerText = "SALVAR ALTERAÇÕES";
         $("btnCancelarEdit").style.display = "block";
-        if(!$("formCadastro").classList.contains('aberto')) {
-            toggleAcordeon('formCadastro', 'iconForm');
-        }
+        if(!$("formCadastro").classList.contains('aberto')) toggleAcordeon('formCadastro', 'iconForm');
         $("formCadastro").scrollIntoView({ behavior: 'smooth' });
     }
 
     function cancelarEdicao() {
         $("editIndex").value = "-1";
-        $("nome").value = "";
-        $("apelido").value = "";
-        $("tel").value = "";
-        $("valor").value = "";
-        $("venc").value = "";
+        ["nome", "apelido", "tel", "valor", "venc"].forEach(id => $(id).value = "");
         $("alunoFotoPreview").src = "https://via.placeholder.com/80";
         $("tituloForm").innerText = "➕ NOVO ALUNO";
         $("btnCadastrar").innerText = "CADASTRAR";
@@ -420,32 +405,25 @@ const firebaseConfig = {
         const idx = parseInt($("editIndex").value);
         const n = $("nome").value, v = $("valor").value;
         if(!n || !v) return alert("Preencha o nome e valor!");
-
         if(idx === -1) {
             const d = $("venc").value;
             if(!d) return alert("Escolha uma data de vencimento!");
             const parcelas = [];
-            let [dia, mes, ano] = d.split('-');
+            let [ano, mes, dia] = d.split('-');
             for(let i=0; i<12; i++) {
                 let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
                 parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
             }
             alunos.push({ nome: n, apelido: $("apelido").value, tel: $("tel").value, valor: v, foto: $("alunoFotoPreview").src, parcelas, aberto: false });
         } else {
-            alunos[idx].nome = n;
-            alunos[idx].apelido = $("apelido").value;
-            alunos[idx].tel = $("tel").value;
-            alunos[idx].valor = v;
+            alunos[idx].nome = n; alunos[idx].apelido = $("apelido").value;
+            alunos[idx].tel = $("tel").value; alunos[idx].valor = v;
             alunos[idx].foto = $("alunoFotoPreview").src;
-            $("editIndex").value = "-1";
-            $("tituloForm").innerText = "➕ NOVO ALUNO";
-            $("btnCadastrar").innerText = "CADASTRAR";
-            $("btnCancelarEdit").style.display = "none";
+            cancelarEdicao();
         }
         sincronizar();
         ["nome", "apelido", "tel", "valor", "venc"].forEach(id => $(id).value = "");
         $("alunoFotoPreview").src = "https://via.placeholder.com/80";
-        toggleAcordeon('formCadastro', 'iconForm');
     }
 
     function gerarFin() {
@@ -463,14 +441,9 @@ const firebaseConfig = {
         $("txtMesAtual").innerText = (m+1)+"/"+y;
     }
 
-    // ACORDEÃO GLOBAL ATUALIZADO
     function toggleAluno(i) {
-        if (alunos[i].aberto) {
-            alunos[i].aberto = false;
-        } else {
-            alunos.forEach(aluno => aluno.aberto = false);
-            alunos[i].aberto = true;
-        }
+        if (alunos[i].aberto) alunos[i].aberto = false;
+        else { alunos.forEach(aluno => aluno.aberto = false); alunos[i].aberto = true; }
         render();
     }
 
@@ -496,7 +469,6 @@ const firebaseConfig = {
     }
     
     function logout() { auth.signOut(); }
-    
     function mudarTabConfig(t) {
         ['Geral','Fin','Msg','Dados'].forEach(x => $(`set${x}`).style.display = x === t ? 'block' : 'none');
         ['Geral','Fin','Msg','Dados'].forEach(x => $(`btnSet${x}`).classList.remove('abaAtiva'));
