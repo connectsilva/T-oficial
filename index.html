@@ -4,7 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Capoeira Control Pro v3.1 - Full</title>
+
+    <!-- Link para o Manifesto -->
     <link rel="manifest" href="manifest.json">
+    <!-- Cor da barra de status no mobile -->
+    <meta name="theme-color" content="#00c853">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script>
+      // Registro do Service Worker
+      if ('service-worker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('PWA Pronto!'))
+            .catch(err => console.log('Erro no PWA', err));
+        });
+      }
+    </script>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -25,40 +41,488 @@
             --radius: 12px;
         }
 
-        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; }
-        body { background: radial-gradient(circle at top right, #1a1a1a, #0a0a0a); color: var(--text-main); min-height: 100vh; }
-        /* O restante do seu CSS original deve ser mantido aqui */
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; outline: none; }
+        body { 
+            background: radial-gradient(circle at top, var(--primary-dark), var(--bg-dark));
+            color: var(--text-main); margin: 0; background-attachment: fixed; min-height: 100vh; padding-bottom: 50px;
+        }
+
+        .container { max-width: 800px; margin: auto; padding: 20px; display: none; }
+
+        /* Login */
+        #loginBox { position: fixed; inset: 0; background: var(--bg-dark); display: flex; justify-content: center; align-items: center; z-index: 99999; padding: 20px; }
+        .login-card { background: var(--card-bg); padding: 30px; border-radius: var(--radius); border: 1px solid var(--primary); width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .login-logo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); margin-bottom: 10px; background: #222; }
+        .password-container { position: relative; margin-top: 10px; }
+        .toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-dim); padding: 5px; }
+        
+        .remember-me { display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 12px; color: var(--text-dim); cursor: pointer; justify-content: center; }
+        .remember-me input { width: auto !important; margin: 0; cursor: pointer; accent-color: var(--primary); }
+
+        /* App Layout */
+        .header-academia { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.1); }
+        .logo-academia { width: 65px; height: 65px; border-radius: 12px; object-fit: cover; border: 1px solid var(--primary); }
+        .settings-btn { font-size: 22px; cursor: pointer; background: rgba(255,255,255,0.1); width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.3s; }
+        
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .box { background: var(--card-bg); padding: 15px; border-radius: var(--radius); text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .box span { font-size: 24px; font-weight: bold; color: var(--primary); display: block; }
+
+        .card { background: var(--card-bg); border-radius: var(--radius); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+        .acordeon-header { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+        .acordeon-content { max-height: 0; overflow: hidden; transition: 0.4s ease; padding: 0 20px; }
+        .acordeon-content.aberto { max-height: 2000px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+
+        .photo-upload { width: 80px; height: 80px; background: var(--input-bg); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px dashed var(--primary); overflow: hidden; position: relative; }
+        .photo-upload img { width: 100%; height: 100%; object-fit: cover; }
+        
+        label { font-size: 11px; color: var(--primary); font-weight: bold; display: block; margin-top: 10px; }
+        input, textarea { padding: 12px; border-radius: 8px; width: 100%; background: var(--input-bg); color: #fff; border: 1px solid transparent; margin-top: 5px; }
+        input:focus { border-color: var(--primary); }
+        
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn { background: var(--primary); color: #000; }
+        .btn-info { background: var(--info); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 10px; overflow-x: auto; }
+        .tabs button { flex: 1; background: transparent; color: var(--text-dim); font-size: 11px; white-space: nowrap; border: 1px solid transparent; }
+        .tabs button.abaAtiva { background: var(--card-bg); color: var(--primary); border-color: rgba(0, 200, 83, 0.3); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        .aluno-item { background: #1e1e1e; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid var(--primary); overflow: hidden; }
+        .aluno-header { padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .aluno-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; }
+        .parcela { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; }
+
+        #configMenu { display:none; position:fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; padding: 15px; overflow-y: auto; }
+        .config-container { max-width: 500px; margin: 20px auto; background: var(--card-bg); padding: 25px; border-radius: var(--radius); border: 1px solid var(--primary); }
+
+        .progress-bg { background: #333; height: 8px; border-radius: 4px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { background: var(--primary); height: 100%; width: 0%; transition: 1s ease; }
     </style>
 </head>
 <body>
-    <div id="app"></div>
 
-    <script>
-        // REGISTO DO SERVICE WORKER (PWA)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('PWA: Service Worker ativo!', reg))
-                    .catch(err => console.error('PWA: Erro ao registar:', err));
-            });
-        }
-
-        // FIREBASE CONFIG
-        // Substitua pelos seus dados reais conforme o index original
-        const firebaseConfig = {
-            apiKey: "AIza...", 
-            authDomain: "seu-projeto.firebaseapp.com",
-            projectId: "seu-projeto",
-            storageBucket: "seu-projeto.appspot.com",
-            messagingSenderId: "0000000000",
-            appId: "1:0000000000:web:..."
-        };
+<!-- LOGIN -->
+<div id="loginBox">
+    <div class="login-card">
+        <img id="loginLogoImg" class="login-logo" src="https://via.placeholder.com/80">
+        <h2 id="loginNomeAcad" style="color:var(--primary); margin: 5px 0;">Academia</h2>
+        <p id="loginNomeProf" style="font-size:14px; color:var(--text-main); margin-bottom:20px; font-weight: bold;">Professor</p>
         
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        <input id="lUser" type="email" placeholder="E-mail">
+        <div class="password-container">
+            <input id="lPass" type="password" placeholder="Senha">
+            <span class="toggle-password" onclick="togglePass()">👁️</span>
+        </div>
 
-        // INSIRA AQUI TODO O RESTANTE DAS SUAS FUNÇÕES (sincronizar, login, etc)
-    </script>
+        <label class="remember-me">
+            <input type="checkbox" id="lRemember"> Lembrar meu e-mail
+        </label>
+
+        <button class="btn" style="width:100%; margin-top:20px" onclick="entrar()">ENTRAR NO SISTEMA</button>
+        <p style="margin-top: 15px; font-size: 13px;"><a href="#" onclick="recuperarSenha()" style="color: var(--text-dim); text-decoration: none;">Recuperar senha</a></p>
+    </div>
+</div>
+
+<!-- CONFIGURAÇÕES -->
+<div id="configMenu">
+    <div class="config-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <h2 style="color:var(--primary); margin:0">⚙️ Configurações</h2>
+            <button onclick="toggleSettings()" style="background:none; color:var(--danger); font-size:30px">×</button>
+        </div>
+
+        <div class="tabs">
+            <button id="btnSetGeral" class="abaAtiva" onclick="mudarTabConfig('Geral')">GERAL</button>
+            <button id="btnSetFin" onclick="mudarTabConfig('Fin')">FINANCEIRO</button>
+            <button id="btnSetMsg" onclick="mudarTabConfig('Msg')">COBRANÇA</button>
+            <button id="btnSetDados" onclick="mudarTabConfig('Dados')">SAIR</button>
+        </div>
+
+        <div id="setGeral">
+            <div class="photo-upload" onclick="$('cfgFileLogo').click()"><img id="cfgLogoPreview" src=""></div>
+            <input type="file" id="cfgFileLogo" hidden onchange="previewImg(this, 'cfgLogoPreview')">
+            <label>Nome Academia</label><input id="cfgNome">
+            <label>Professor</label><input id="cfgProf">
+            <label>Chave PIX</label><input id="cfgPix">
+            <button class="btn" style="width:100%; margin-top:15px" onclick="salvarConfig()">💾 SALVAR ALTERAÇÕES</button>
+            <hr style="border:0; border-top:1px solid #333; margin:20px 0">
+            <button class="btn" style="width:100%; background:#333; color:#fff" onclick="$('fileBackup').click()">📥 IMPORTAR BACKUP</button>
+            <input type="file" id="fileBackup" hidden onchange="importarBackup(this)">
+        </div>
+
+        <div id="setFin" style="display:none">
+            <h3 style="color:var(--primary); font-size:16px">Resumo (<span id="txtMesAtual"></span>)</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                <div style="background:#000; padding:10px; border-radius:8px"><small>PAGO</small><br><b id="finMensal">R$ 0,00</b></div>
+                <div style="background:#000; padding:10px; border-radius:8px"><small>PENDENTE</small><br><b id="finPendente" style="color:var(--warning)">R$ 0,00</b></div>
+            </div>
+
+            <div style="background: rgba(255, 82, 82, 0.1); padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--danger); text-align: center;">
+                <small style="color:var(--danger); font-weight: bold;">INADIMPLÊNCIA (% DE ALUNOS)</small>
+                <div style="font-size: 28px; font-weight: bold; color: var(--text-main);" id="percInadimplencia">0%</div>
+            </div>
+
+            <div class="progress-bg"><div id="barraProgresso" class="progress-fill"></div></div>
+            <div id="listaRecentes" style="font-size:12px; margin-top:10px"></div>
+        </div>
+
+        <div id="setMsg" style="display:none">
+            <label>Template WhatsApp</label>
+            <textarea id="cfgMsg" rows="8"></textarea>
+            <button class="btn" style="width:100%; margin-top:15px" onclick="salvarConfig()">💾 SALVAR MENSAGEM</button>
+        </div>
+
+        <div id="setDados" style="display:none">
+            <button class="btn-danger" style="width:100%" onclick="logout()">SAIR DA CONTA</button>
+        </div>
+    </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div class="container" id="mainApp">
+    <div class="header-academia">
+        <img id="logoTopo" class="logo-academia" src="https://via.placeholder.com/80">
+        <div style="flex:1"><h1 id="nomeTopo" style="margin:0; font-size:18px"></h1><small id="profTopo"></small></div>
+        <div class="settings-btn" onclick="toggleSettings()">⚙️</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="box"><small>ALUNOS</small><span id="dAlunos">0</span></div>
+        <div class="box"><small>ATRASOS</small><span id="dAtraso" style="color:var(--danger)">0</span></div>
+    </div>
+
+    <div class="card">
+        <div class="acordeon-header" onclick="toggleAcordeon('formCadastro', 'iconForm')">
+            <b id="tituloForm">➕ NOVO ALUNO</b><b id="iconForm">+</b>
+        </div>
+        <div id="formCadastro" class="acordeon-content">
+            <!-- ID OCULTO PARA EDIÇÃO -->
+            <input type="hidden" id="editIndex" value="-1">
+            
+            <div class="photo-upload" onclick="$('alunoFileFoto').click()"><img id="alunoFotoPreview" src="https://via.placeholder.com/80"></div>
+            <input type="file" id="alunoFileFoto" hidden onchange="previewImg(this, 'alunoFotoPreview')">
+            
+            <label>Nome</label><input id="nome">
+            <label>Apelido</label><input id="apelido">
+            <label>WhatsApp</label><input id="tel" type="tel">
+            <div style="display:flex; gap:10px">
+                <div style="flex:1"><label>Valor R$</label><input id="valor" type="number"></div>
+                <div style="flex:1"><label>Vencimento (Inicial)</label><input id="venc" type="date"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px">
+                <button id="btnCadastrar" class="btn" style="flex:2" onclick="salvarAluno()">CADASTRAR</button>
+                <button id="btnCancelarEdit" class="btn-danger" style="flex:1; display:none" onclick="cancelarEdicao()">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <input id="inputBusca" placeholder="🔍 Buscar aluno..." oninput="render()" style="margin-bottom:15px">
+
+    <div class="tabs">
+        <button id="tAtr" class="abaAtiva" onclick="trocarAba('atrasado')">ATRASADOS</button>
+        <button id="tPen" onclick="trocarAba('pendente')">PENDENTES</button>
+        <button id="tDia" onclick="trocarAba('pago')">EM DIA</button>
+    </div>
+
+    <div id="listaAlunos"></div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBaR3l4VXYRIHyvcyqMco6Sy4_-eYGpR8g",
+        authDomain: "teste02-ce0d2.firebaseapp.com",
+        projectId: "teste02-ce0d2",
+        storageBucket: "teste02-ce0d2.firebasestorage.app",
+        messagingSenderId: "389717337129",
+        appId: "1:389717337129:web:fdc718e47ff6ea73f96838"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let alunos = [];
+    let config = { nome: "Academia Capoeira", prof: "Professor", pix: "", logo: "https://via.placeholder.com/80", msg: "Olá [nome]!" };
+    let abaAtual = 'atrasado';
+
+    window.onload = () => {
+        auth.signOut().then(() => {
+            $("loginBox").style.display = "flex";
+            $("mainApp").style.display = "none";
+        });
+
+        const email = localStorage.getItem("capoeira_email");
+        if(email) { $("lUser").value = email; $("lRemember").checked = true; }
+        
+        const cached = localStorage.getItem("capoeira_config");
+        if(cached) {
+            const c = JSON.parse(cached);
+            $("loginNomeAcad").innerText = c.nome;
+            $("loginNomeProf").innerText = c.prof;
+            $("loginLogoImg").src = c.logo;
+        }
+    };
+
+    function entrar() {
+        const u = $("lUser").value, p = $("lPass").value;
+        if(!u || !p) return alert("Preencha os campos!");
+        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(() => {
+            if($("lRemember").checked) localStorage.setItem("capoeira_email", u);
+            else localStorage.removeItem("capoeira_email");
+            return auth.signInWithEmailAndPassword(u, p);
+        }).catch(e => alert("Erro no login!"));
+    }
+
+    auth.onAuthStateChanged(user => {
+        if(user) { 
+            $("loginBox").style.display="none"; 
+            $("mainApp").style.display="block"; 
+            carregarDados(); 
+        } else { 
+            $("loginBox").style.display="flex"; 
+            $("mainApp").style.display="none"; 
+        }
+    });
+
+    function trocarAba(aba) {
+        abaAtual = aba;
+        $('tAtr').classList.remove('abaAtiva');
+        $('tPen').classList.remove('abaAtiva');
+        $('tDia').classList.remove('abaAtiva');
+        if(aba === 'atrasado') $('tAtr').classList.add('abaAtiva');
+        if(aba === 'pendente') $('tPen').classList.add('abaAtiva');
+        if(aba === 'pago') $('tDia').classList.add('abaAtiva');
+        render();
+    }
+
+    async function carregarDados() {
+        if(!auth.currentUser) return;
+        const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+        if(doc.exists) {
+            const d = doc.data();
+            alunos = d.alunos || [];
+            config = d.config || config;
+            localStorage.setItem("capoeira_config", JSON.stringify(config));
+            aplicarConfig();
+            render();
+        }
+    }
+
+    function aplicarConfig() {
+        $("nomeTopo").innerText = config.nome; $("profTopo").innerText = config.prof;
+        $("logoTopo").src = config.logo; $("loginLogoImg").src = config.logo;
+        $("loginNomeAcad").innerText = config.nome; $("loginNomeProf").innerText = config.prof;
+        $("cfgNome").value = config.nome; $("cfgProf").value = config.prof;
+        $("cfgPix").value = config.pix; $("cfgMsg").value = config.msg;
+        $("cfgLogoPreview").src = config.logo;
+    }
+
+    async function sincronizar() {
+        if(!auth.currentUser) return;
+        await db.collection('users').doc(auth.currentUser.uid).set({ config, alunos });
+        aplicarConfig();
+        render();
+    }
+
+    function render() {
+        const lista = $("listaAlunos"); lista.innerHTML = "";
+        const busca = $("inputBusca").value.toLowerCase();
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        let totalAtrasos = 0;
+        let totalAlunosInadimplentes = 0;
+
+        alunos.forEach((a, i) => {
+            const parse = d => { const [dia, mes, ano] = d.split('/'); return new Date(ano, mes-1, dia); };
+            const atr = a.parcelas.filter(p => !p.pago && parse(p.data) < hoje);
+            const pen = a.parcelas.filter(p => !p.pago && parse(p.data) >= hoje);
+            const pag = a.parcelas.filter(p => p.pago);
+            
+            if(atr.length > 0) {
+                totalAtrasos += atr.length;
+                totalAlunosInadimplentes++; 
+            }
+
+            if (busca && !a.nome.toLowerCase().includes(busca) && !a.apelido.toLowerCase().includes(busca)) return;
+            let exibir = abaAtual === 'atrasado' ? atr : (abaAtual === 'pendente' ? pen : pag);
+
+            if(exibir.length > 0) {
+                lista.innerHTML += `
+                <div class="aluno-item" style="border-left-color: ${atr.length ? 'var(--danger)' : 'var(--primary)'}">
+                    <div class="aluno-header" onclick="toggleAluno(${i})">
+                        <img src="${a.foto}" class="aluno-img">
+                        <div style="flex:1"><b>${a.nome}</b><br><small>${a.apelido || ''}</small></div>
+                        <div style="display:flex; gap:10px; align-items:center">
+                             <button onclick="event.stopPropagation(); prepararEdicao(${i})" style="background:none; color:var(--info); font-size:18px">✏️</button>
+                             <span style="background:#333; padding:2px 8px; border-radius:10px; font-size:11px">${exibir.length}</span>
+                        </div>
+                    </div>
+                    <div class="acordeon-content ${a.aberto ? 'aberto' : ''}">
+                        ${exibir.map(p => `
+                            <div class="parcela">
+                                <div><b>R$ ${a.valor}</b><br><small>${p.data}</small></div>
+                                <div style="display:flex; gap:5px">
+                                    <button class="btn" onclick="baixar(${i}, '${p.data}')">${p.pago?'↩':'✔'}</button>
+                                    <button class="btn" style="background:var(--warning)" onclick="cobrar(${i}, '${p.data}')">📱</button>
+                                    <button class="btn-danger" onclick="excluirAluno(${i})">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+        });
+        
+        $("dAlunos").innerText = alunos.length;
+        $("dAtraso").innerText = totalAtrasos;
+        const perc = alunos.length > 0 ? ((totalAlunosInadimplentes / alunos.length) * 100).toFixed(1) : 0;
+        $("percInadimplencia").innerText = perc + "%";
+        gerarFin();
+    }
+
+    function prepararEdicao(i) {
+        const a = alunos[i];
+        $("editIndex").value = i;
+        $("nome").value = a.nome;
+        $("apelido").value = a.apelido || '';
+        $("tel").value = a.tel || '';
+        $("valor").value = a.valor;
+        $("alunoFotoPreview").src = a.foto;
+        $("tituloForm").innerText = "✏️ EDITAR ALUNO";
+        $("btnCadastrar").innerText = "SALVAR ALTERAÇÕES";
+        $("btnCancelarEdit").style.display = "block";
+        if(!$("formCadastro").classList.contains('aberto')) {
+            toggleAcordeon('formCadastro', 'iconForm');
+        }
+        $("formCadastro").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelarEdicao() {
+        $("editIndex").value = "-1";
+        $("nome").value = "";
+        $("apelido").value = "";
+        $("tel").value = "";
+        $("valor").value = "";
+        $("venc").value = "";
+        $("alunoFotoPreview").src = "https://via.placeholder.com/80";
+        $("tituloForm").innerText = "➕ NOVO ALUNO";
+        $("btnCadastrar").innerText = "CADASTRAR";
+        $("btnCancelarEdit").style.display = "none";
+        toggleAcordeon('formCadastro', 'iconForm');
+    }
+
+    function salvarAluno() {
+        const idx = parseInt($("editIndex").value);
+        const n = $("nome").value, v = $("valor").value;
+        if(!n || !v) return alert("Preencha o nome e valor!");
+
+        if(idx === -1) {
+            const d = $("venc").value;
+            if(!d) return alert("Escolha uma data de vencimento!");
+            const parcelas = [];
+            let [dia, mes, ano] = d.split('-');
+            for(let i=0; i<12; i++) {
+                let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
+                parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
+            }
+            alunos.push({ nome: n, apelido: $("apelido").value, tel: $("tel").value, valor: v, foto: $("alunoFotoPreview").src, parcelas, aberto: false });
+        } else {
+            alunos[idx].nome = n;
+            alunos[idx].apelido = $("apelido").value;
+            alunos[idx].tel = $("tel").value;
+            alunos[idx].valor = v;
+            alunos[idx].foto = $("alunoFotoPreview").src;
+            $("editIndex").value = "-1";
+            $("tituloForm").innerText = "➕ NOVO ALUNO";
+            $("btnCadastrar").innerText = "CADASTRAR";
+            $("btnCancelarEdit").style.display = "none";
+        }
+        sincronizar();
+        ["nome", "apelido", "tel", "valor", "venc"].forEach(id => $(id).value = "");
+        $("alunoFotoPreview").src = "https://via.placeholder.com/80";
+        toggleAcordeon('formCadastro', 'iconForm');
+    }
+
+    function gerarFin() {
+        let pagos = 0, pend = 0;
+        const agora = new Date(), m = agora.getMonth(), y = agora.getFullYear();
+        alunos.forEach(a => a.parcelas.forEach(p => {
+            const [dia, mes, ano] = p.data.split('/');
+            if(parseInt(mes)-1 === m && parseInt(ano) === y) {
+                if(p.pago) pagos += parseFloat(a.valor); else pend += parseFloat(a.valor);
+            }
+        }));
+        $("finMensal").innerText = "R$ " + pagos.toFixed(2);
+        $("finPendente").innerText = "R$ " + pend.toFixed(2);
+        $("barraProgresso").style.width = (pagos/(pagos+pend||1)*100) + "%";
+        $("txtMesAtual").innerText = (m+1)+"/"+y;
+    }
+
+    // ACORDEÃO GLOBAL ATUALIZADO
+    function toggleAluno(i) {
+        if (alunos[i].aberto) {
+            alunos[i].aberto = false;
+        } else {
+            alunos.forEach(aluno => aluno.aberto = false);
+            alunos[i].aberto = true;
+        }
+        render();
+    }
+
+    function toggleSettings() { $("configMenu").style.display = $("configMenu").style.display === "block" ? "none" : "block"; }
+    function togglePass() { const p = $("lPass"); p.type = p.type === "password" ? "text" : "password"; }
+    function baixar(i, d) { const p = alunos[i].parcelas.find(x => x.data === d); p.pago = !p.pago; sincronizar(); }
+    function excluirAluno(i) { if(confirm("Excluir aluno?")) { alunos.splice(i,1); sincronizar(); } }
+    
+    function cobrar(i, d) {
+        const a = alunos[i];
+        const txt = config.msg.replace("[nome]", a.apelido || a.nome).replace("[data]", d).replace("[valor]", a.valor).replace("[pix]", config.pix);
+        window.open(`https://wa.me/55${a.tel.replace(/\D/g,'')}?text=${encodeURIComponent(txt)}`);
+    }
+    
+    function toggleAcordeon(id, icon) { $(id).classList.toggle('aberto'); }
+    function previewImg(i, d) { if(i.files[0]) { const r = new FileReader(); r.onload = e => $(d).src = e.target.result; r.readAsDataURL(i.files[0]); } }
+    
+    function salvarConfig() { 
+        config.nome = $("cfgNome").value; config.prof = $("cfgProf").value; 
+        config.pix = $("cfgPix").value; config.msg = $("cfgMsg").value; 
+        config.logo = $("cfgLogoPreview").src;
+        sincronizar(); 
+    }
+    
+    function logout() { auth.signOut(); }
+    
+    function mudarTabConfig(t) {
+        ['Geral','Fin','Msg','Dados'].forEach(x => $(`set${x}`).style.display = x === t ? 'block' : 'none');
+        ['Geral','Fin','Msg','Dados'].forEach(x => $(`btnSet${x}`).classList.remove('abaAtiva'));
+        $(`btnSet${t}`).classList.add('abaAtiva');
+    }
+
+    function recuperarSenha() {
+        const e = $("lUser").value;
+        if(!e) return alert("Digite seu e-mail!");
+        auth.sendPasswordResetEmail(e).then(() => alert("E-mail de recuperação enviado!")).catch(err => alert(err.message));
+    }
+
+    function importarBackup(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(data.alunos) {
+                        alunos = data.alunos;
+                        if(data.config) config = data.config;
+                        await sincronizar();
+                        alert("Backup importado com sucesso!");
+                    }
+                } catch(err) { alert("Arquivo inválido!"); }
+            };
+            reader.readAsText(input.files[0]);
+        }
+    }
+</script>
 </body>
 </html>
