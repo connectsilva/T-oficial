@@ -232,14 +232,17 @@
 <script>
     const $ = id => document.getElementById(id);
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBaR3l4VXYRIHyvcyqMco6Sy4_-eYGpR8g",
-        authDomain: "teste02-ce0d2.firebaseapp.com",
-        projectId: "teste02-ce0d2",
-        storageBucket: "teste02-ce0d2.firebasestorage.app",
-        messagingSenderId: "389717337129",
-        appId: "1:389717337129:web:fdc718e47ff6ea73f96838"
-    };
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAifUhJB6krANoJhGSI-CBYOCElm-QLa1Y",
+  authDomain: "capoeira-oficial-b7421.firebaseapp.com",
+  databaseURL: "https://capoeira-oficial-b7421-default-rtdb.firebaseio.com",
+  projectId: "capoeira-oficial-b7421",
+  storageBucket: "capoeira-oficial-b7421.firebasestorage.app",
+  messagingSenderId: "1020091949434",
+  appId: "1:1020091949434:web:6a1bc84179c9f99a76b6c3",
+  measurementId: "G-ZCCXZ44Q50"
+};
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
