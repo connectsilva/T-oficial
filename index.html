@@ -96,6 +96,13 @@
 
         .progress-bg { background: #333; height: 8px; border-radius: 4px; margin: 10px 0; overflow: hidden; }
         .progress-fill { background: var(--primary); height: 100%; width: 0%; transition: 1s ease; }
+
+        /* Estilo da Ficha Completa */
+        #modalFicha { display:none; position:fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; padding: 15px; overflow-y: auto; }
+        .ficha-card { max-width: 500px; margin: 20px auto; background: var(--card-bg); padding: 25px; border-radius: var(--radius); border: 1px solid var(--primary); }
+        .ficha-item { margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .ficha-item b { color: var(--primary); font-size: 11px; display: block; text-transform: uppercase; }
+        .ficha-item span { font-size: 15px; color: #fff; }
     </style>
 </head>
 <body>
@@ -138,11 +145,27 @@
         <div id="setGeral">
             <div class="photo-upload" onclick="$('cfgFileLogo').click()"><img id="cfgLogoPreview" src=""></div>
             <input type="file" id="cfgFileLogo" hidden onchange="previewImg(this, 'cfgLogoPreview')">
-            <label>Nome Academia</label><input id="cfgNome">
-            <label>Professor</label><input id="cfgProf">
-            <label>Chave PIX</label><input id="cfgPix">
+            
+            <label>Nome Academia</label>
+            <input id="cfgNome">
+            
+            <label>Professor</label>
+            <input id="cfgProf">
+            
+            <!-- Campo do Link de Cadastro -->
+            <label>Link de Cadastro (Novos Alunos)</label>
+            <div style="display:flex; gap:5px; margin-top:5px">
+                <input id="linkCadastro" readonly style="font-size:10px; background:#111">
+                <button class="btn-info" onclick="copiarLink()" style="padding:0 15px">📋</button>
+            </div>
+
+            <label>Chave PIX</label>
+            <input id="cfgPix">
+            
             <button class="btn" style="width:100%; margin-top:15px" onclick="salvarConfig()">💾 SALVAR ALTERAÇÕES</button>
+            
             <hr style="border:0; border-top:1px solid #333; margin:20px 0">
+            
             <button class="btn" style="width:100%; background:#333; color:#fff" onclick="$('fileBackup').click()">📥 IMPORTAR BACKUP</button>
             <input type="file" id="fileBackup" hidden onchange="importarBackup(this)">
         </div>
@@ -153,14 +176,11 @@
                 <div style="background:#000; padding:10px; border-radius:8px"><small>PAGO</small><br><b id="finMensal">R$ 0,00</b></div>
                 <div style="background:#000; padding:10px; border-radius:8px"><small>PENDENTE</small><br><b id="finPendente" style="color:var(--warning)">R$ 0,00</b></div>
             </div>
-
             <div style="background: rgba(255, 82, 82, 0.1); padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--danger); text-align: center;">
                 <small style="color:var(--danger); font-weight: bold;">INADIMPLÊNCIA (% DE ALUNOS)</small>
                 <div style="font-size: 28px; font-weight: bold; color: var(--text-main);" id="percInadimplencia">0%</div>
             </div>
-
             <div class="progress-bg"><div id="barraProgresso" class="progress-fill"></div></div>
-            <div id="listaRecentes" style="font-size:12px; margin-top:10px"></div>
         </div>
 
         <div id="setMsg" style="display:none">
@@ -220,6 +240,17 @@
     <div id="listaAlunos"></div>
 </div>
 
+<div id="modalFicha">
+    <div class="ficha-card">
+        <div style="text-align:center; margin-bottom:20px">
+            <img id="fichaFoto" src="" style="width:100px; height:100px; border-radius:50%; border:2px solid var(--primary); object-fit:cover">
+            <h2 id="fichaNome" style="margin:10px 0 0 0; color:var(--primary)"></h2>
+        </div>
+        <div id="corpoFicha"></div>
+        <button class="btn-danger" style="width:100%; margin-top:20px" onclick="$('modalFicha').style.display='none'">FECHAR</button>
+    </div>
+</div>
+
 <script>
     const $ = id => document.getElementById(id);
 
@@ -239,8 +270,6 @@
     const db = firebase.firestore();
 
     let alunos = [];
-    
-    // MENSAGEM PADRÃO DE FÁBRICA ATUALIZADA
     const MENSAGEM_PADRAO = "Olá, [nome]! 👋\nTudo bem?\n\nIdentificamos que sua mensalidade ainda está em aberto. Seguem os detalhes:\n\n📆 Vencimento: [data]\n💰 Valor: R$ [valor]\n🔑 Chave Pix para pagamento: [pix]\n\nCaso já tenha realizado o pagamento, por favor desconsidere esta mensagem.\n\nSe precisar de qualquer ajuda ou tiver alguma dúvida, estou à disposição 🙂";
 
     let config = { 
@@ -280,20 +309,15 @@
     }
 
     auth.onAuthStateChanged(user => {
-        if(user) { $("loginBox").style.display="none"; $("mainApp").style.display="block"; carregarDados(); }
-        else { $("loginBox").style.display="flex"; $("mainApp").style.display="none"; }
+        if(user) { 
+            $("loginBox").style.display="none"; 
+            $("mainApp").style.display="block"; 
+            carregarDados(); 
+        } else { 
+            $("loginBox").style.display="flex"; 
+            $("mainApp").style.display="none"; 
+        }
     });
-
-    function trocarAba(aba) {
-        abaAtual = aba;
-        $('tAtr').classList.remove('abaAtiva');
-        $('tPen').classList.remove('abaAtiva');
-        $('tDia').classList.remove('abaAtiva');
-        if(aba === 'atrasado') $('tAtr').classList.add('abaAtiva');
-        if(aba === 'pendente') $('tPen').classList.add('abaAtiva');
-        if(aba === 'pago') $('tDia').classList.add('abaAtiva');
-        render();
-    }
 
     async function carregarDados() {
         if(!auth.currentUser) return;
@@ -302,22 +326,33 @@
             const d = doc.data();
             alunos = d.alunos || [];
             config = d.config || config;
-            // Garante que se a mensagem estiver vazia no banco, use o novo padrão
             if(!config.msg || config.msg.trim() === "") config.msg = MENSAGEM_PADRAO;
-            
             localStorage.setItem("capoeira_config", JSON.stringify(config));
             aplicarConfig();
             render();
+        } else {
+            aplicarConfig();
         }
     }
 
     function aplicarConfig() {
-        $("nomeTopo").innerText = config.nome; $("profTopo").innerText = config.prof;
-        $("logoTopo").src = config.logo; $("loginLogoImg").src = config.logo;
-        $("loginNomeAcad").innerText = config.nome; $("loginNomeProf").innerText = config.prof;
-        $("cfgNome").value = config.nome; $("cfgProf").value = config.prof;
-        $("cfgPix").value = config.pix; $("cfgMsg").value = config.msg;
+        if(!auth.currentUser) return;
+        $("nomeTopo").innerText = config.nome; 
+        $("profTopo").innerText = config.prof;
+        $("logoTopo").src = config.logo; 
+        $("loginLogoImg").src = config.logo;
+        $("loginNomeAcad").innerText = config.nome; 
+        $("loginNomeProf").innerText = config.prof;
+        $("cfgNome").value = config.nome; 
+        $("cfgProf").value = config.prof;
+        $("cfgPix").value = config.pix; 
+        $("cfgMsg").value = config.msg;
         $("cfgLogoPreview").src = config.logo;
+
+        // Gerar o Link de Cadastro com o UID do Firebase
+        const uid = auth.currentUser.uid;
+        const urlBase = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
+        $("linkCadastro").value = `${urlBase}cadastro.html?ref=${uid}`;
     }
 
     async function sincronizar() {
@@ -347,9 +382,10 @@
                 lista.innerHTML += `
                 <div class="aluno-item" style="border-left-color: ${atr.length ? 'var(--danger)' : 'var(--primary)'}">
                     <div class="aluno-header" onclick="toggleAluno(${i})">
-                        <img src="${a.foto}" class="aluno-img">
+                        <img src="${a.foto || 'https://via.placeholder.com/80'}" class="aluno-img">
                         <div style="flex:1"><b>${a.nome}</b><br><small>${a.apelido || ''}</small></div>
                         <div style="display:flex; gap:10px; align-items:center">
+                             <button onclick="event.stopPropagation(); verFicha(${i})" style="background:none; color:var(--warning); font-size:18px">📋</button>
                              <button onclick="event.stopPropagation(); prepararEdicao(${i})" style="background:none; color:var(--info); font-size:18px">✏️</button>
                              <span style="background:#333; padding:2px 8px; border-radius:10px; font-size:11px">${exibir.length}</span>
                         </div>
@@ -376,6 +412,50 @@
         gerarFin();
     }
 
+    function verFicha(i) {
+        const a = alunos[i];
+        $("fichaFoto").src = a.foto || 'https://via.placeholder.com/80';
+        $("fichaNome").innerText = a.nome;
+        const campos = [
+            { label: "Apelido", valor: a.apelido },
+            { label: "Nascimento", valor: a.nascimento },
+            { label: "Sexo", valor: a.sexo },
+            { label: "WhatsApp", valor: a.tel },
+            { label: "Endereço", valor: `${a.bairro || ''}, ${a.cidade || ''} - ${a.cep || ''}` },
+            { label: "Responsável", valor: `${a.resp_nome || 'O próprio'} (${a.reside_com || ''})` },
+            { label: "Alergia", valor: a.alergia },
+            { label: "Remédio", valor: a.remedio },
+            { label: "Restrição", valor: a.restricao },
+            { label: "Emergência", valor: a.emergencia_fone },
+            { label: "Saída só?", valor: a.autoriza_saida }
+        ];
+        $("corpoFicha").innerHTML = campos.map(c => `
+            <div class="ficha-item">
+                <b>${c.label}</b>
+                <span>${c.valor || '---'}</span>
+            </div>
+        `).join('');
+        $("modalFicha").style.display = "block";
+    }
+
+    function copiarLink() {
+        const link = $("linkCadastro");
+        link.select();
+        link.setSelectionRange(0, 99999); 
+        navigator.clipboard.writeText(link.value).then(() => {
+            alert("Link copiado! Envie para o novo aluno.");
+        });
+    }
+
+    function trocarAba(aba) {
+        abaAtual = aba;
+        ['tAtr', 'tPen', 'tDia'].forEach(id => $(id).classList.remove('abaAtiva'));
+        if(aba === 'atrasado') $('tAtr').classList.add('abaAtiva');
+        if(aba === 'pendente') $('tPen').classList.add('abaAtiva');
+        if(aba === 'pago') $('tDia').classList.add('abaAtiva');
+        render();
+    }
+
     function prepararEdicao(i) {
         const a = alunos[i];
         $("editIndex").value = i;
@@ -383,7 +463,7 @@
         $("apelido").value = a.apelido || '';
         $("tel").value = a.tel || '';
         $("valor").value = a.valor;
-        $("alunoFotoPreview").src = a.foto;
+        $("alunoFotoPreview").src = a.foto || 'https://via.placeholder.com/80';
         $("tituloForm").innerText = "✏️ EDITAR ALUNO";
         $("btnCadastrar").innerText = "SALVAR ALTERAÇÕES";
         $("btnCancelarEdit").style.display = "block";
@@ -451,36 +531,30 @@
     function togglePass() { const p = $("lPass"); p.type = p.type === "password" ? "text" : "password"; }
     function baixar(i, d) { const p = alunos[i].parcelas.find(x => x.data === d); p.pago = !p.pago; sincronizar(); }
     function excluirAluno(i) { if(confirm("Excluir aluno?")) { alunos.splice(i,1); sincronizar(); } }
-    
     function cobrar(i, d) {
         const a = alunos[i];
         const txt = config.msg.replace("[nome]", a.apelido || a.nome).replace("[data]", d).replace("[valor]", a.valor).replace("[pix]", config.pix);
         window.open(`https://wa.me/55${a.tel.replace(/\D/g,'')}?text=${encodeURIComponent(txt)}`);
     }
-    
     function toggleAcordeon(id, icon) { $(id).classList.toggle('aberto'); }
     function previewImg(i, d) { if(i.files[0]) { const r = new FileReader(); r.onload = e => $(d).src = e.target.result; r.readAsDataURL(i.files[0]); } }
-    
     function salvarConfig() { 
         config.nome = $("cfgNome").value; config.prof = $("cfgProf").value; 
         config.pix = $("cfgPix").value; config.msg = $("cfgMsg").value; 
         config.logo = $("cfgLogoPreview").src;
         sincronizar(); 
     }
-    
     function logout() { auth.signOut(); }
     function mudarTabConfig(t) {
         ['Geral','Fin','Msg','Dados'].forEach(x => $(`set${x}`).style.display = x === t ? 'block' : 'none');
         ['Geral','Fin','Msg','Dados'].forEach(x => $(`btnSet${x}`).classList.remove('abaAtiva'));
         $(`btnSet${t}`).classList.add('abaAtiva');
     }
-
     function recuperarSenha() {
         const e = $("lUser").value;
         if(!e) return alert("Digite seu e-mail!");
         auth.sendPasswordResetEmail(e).then(() => alert("E-mail de recuperação enviado!")).catch(err => alert(err.message));
     }
-
     function importarBackup(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
