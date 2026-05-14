@@ -190,37 +190,36 @@
     // Busca o nome do professor
 
 async function buscarNomeProfessor() {
-    console.log("Iniciando busca para o UID:", profUID);
     if (!profUID) {
-        document.getElementById('nomeProfessor').innerText = "Link sem referência de professor";
+        document.getElementById('nomeProfessor').innerText = "Link sem referência";
         return;
     }
 
     try {
-        const docRef = db.collection('users').doc(profUID);
-        const doc = await docRef.get();
+        const doc = await db.collection('users').doc(profUID).get();
         
         if (doc.exists) {
             const dados = doc.data();
-            console.log("Dados do Firestore:", dados);
+            console.log("Campos encontrados no banco:", Object.keys(dados));
 
-            // AJUSTE AQUI: O código agora busca 'cfgProf' que é como você salvou
-            if (dados.cfgProf) {
-                document.getElementById('nomeProfessor').innerText = "Professor: " + dados.cfgProf;
-            } 
-            // Caso o campo cfgProf não exista, tenta o campo 'nome' como reserva
-            else if (dados.nome) {
-                document.getElementById('nomeProfessor').innerText = "Professor: " + dados.nome;
-            }
-            else {
-                document.getElementById('nomeProfessor').innerText = "Professor identificado (sem nome definido)";
+            // Tenta encontrar o nome em todas as variações possíveis que você pode ter usado
+            const nomeFinal = dados.cfgProf ||  // ID do seu input
+                              dados.cfgprof ||  // Minúsculo
+                              dados.nome ||     // Padrão
+                              dados.Nome ||     // Com N maiúsculo
+                              dados.professor;  // Outra possibilidade
+
+            if (nomeFinal) {
+                document.getElementById('nomeProfessor').innerText = "Professor: " + nomeFinal;
+            } else {
+                // Se cair aqui, o documento existe mas está vazio ou o nome tem outro ID
+                document.getElementById('nomeProfessor').innerText = "Professor: (Nome não configurado)";
             }
         } else {
-            console.error("Documento não existe!");
-            document.getElementById('nomeProfessor').innerText = "Professor não cadastrado";
+            document.getElementById('nomeProfessor').innerText = "Professor não localizado";
         }
     } catch (error) {
-        console.error("Erro detalhado:", error);
+        console.error("Erro:", error);
         document.getElementById('nomeProfessor').innerText = "Erro ao carregar perfil";
     }
 }
