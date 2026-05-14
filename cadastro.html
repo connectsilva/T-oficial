@@ -190,26 +190,37 @@
     // Busca o nome do professor
 
 async function buscarNomeProfessor() {
+    console.log("Iniciando busca para o UID:", profUID);
     if (!profUID) {
-        document.getElementById('nomeProfessor').innerText = "Link sem referência";
+        document.getElementById('nomeProfessor').innerText = "Link sem referência de professor";
         return;
     }
 
     try {
-        const doc = await db.collection('users').doc(profUID).get();
+        const docRef = db.collection('users').doc(profUID);
+        const doc = await docRef.get();
         
         if (doc.exists) {
             const dados = doc.data();
-            // Tenta buscar o nome de várias formas (nome, Nome ou apelido)
-            const nomeEncontrado = dados.nome || dados.Nome || dados.apelido || "Professor Ativo";
-            
-            document.getElementById('nomeProfessor').innerText = "Professor: " + nomeEncontrado;
-            console.log("Dados do professor carregados com sucesso!");
+            console.log("Dados do Firestore:", dados);
+
+            // AJUSTE AQUI: O código agora busca 'cfgProf' que é como você salvou
+            if (dados.cfgProf) {
+                document.getElementById('nomeProfessor').innerText = "Professor: " + dados.cfgProf;
+            } 
+            // Caso o campo cfgProf não exista, tenta o campo 'nome' como reserva
+            else if (dados.nome) {
+                document.getElementById('nomeProfessor').innerText = "Professor: " + dados.nome;
+            }
+            else {
+                document.getElementById('nomeProfessor').innerText = "Professor identificado (sem nome definido)";
+            }
         } else {
-            document.getElementById('nomeProfessor').innerText = "Professor não localizado";
+            console.error("Documento não existe!");
+            document.getElementById('nomeProfessor').innerText = "Professor não cadastrado";
         }
     } catch (error) {
-        console.error("Erro:", error);
+        console.error("Erro detalhado:", error);
         document.getElementById('nomeProfessor').innerText = "Erro ao carregar perfil";
     }
 }
