@@ -77,13 +77,13 @@
             <div class="row">
                 <div><label>Sexo</label>
                     <select id="sexo">
-                        <option value="Masculino">Seleciona</option>
+                        <option value="Seleciona">Seleciona</option>
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
-                        <option value="Outro">Outro</option>
                     </select>
                 </div>
-                <div><label>WhatsApp</label><input type="tel" id="tel" placeholder="(00) 00000-0000" required></div>
+
+                <div><label>WhatsApp</label><input type="tel" id="tel" placeholder="(99) 99999-9999" required></div>
             </div>
 
             <label>Endereço Completo</label>
@@ -103,12 +103,16 @@
     </div>
 </div>
 
-<div id="mensagemSucesso">
-    <h1 style="color: var(--primary);">💪 Axé!</h1>
-    <p>Seu cadastro foi enviado com sucesso para o professor.</p>
-    <p>Agora é só aguardar a confirmação na próxima aula!</p>
+<div id="sucesso">
+    <div class="check-icon">🏹</div> <!-- Ícone de Berimbau ✅ -->
+    <h2 class="sucesso-titulo">Axé, tudo pronto!</h2>
+    <p class="sucesso-texto">
+        Sua ficha de inscrição foi enviada com sucesso para o sistema do professor.<br>
+        <strong>Seja muito bem-vindo(a) à nossa família!</strong>
+    </p>
+    
+    <a href="javascript:location.reload()" class="btn-voltar">FECHAR</a>
 </div>
-
 <script>
     // Configuração idêntica à do Professor
  const firebaseConfig = {
@@ -118,8 +122,7 @@
         storageBucket: "teste02-ce0d2.firebasestorage.app",
         messagingSenderId: "389717337129",
         appId: "1:389717337129:web:fdc718e47ff6ea73f96838"
-    };
-    
+    };    
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
