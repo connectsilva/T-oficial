@@ -231,11 +231,12 @@
 
     <input id="inputBusca" placeholder="🔍 Buscar aluno..." oninput="render()" style="margin-bottom:15px">
 
-    <div class="tabs">
-        <button id="tAtr" class="abaAtiva" onclick="trocarAba('atrasado')">ATRASADOS</button>
-        <button id="tPen" onclick="trocarAba('pendente')">PENDENTES</button>
-        <button id="tDia" onclick="trocarAba('pago')">EM DIA</button>
-    </div>
+<div class="tabs">
+    <button id="tNov" class="abaAtiva" onclick="trocarAba('novo')">NOVOS</button>
+    <button id="tAtr" onclick="trocarAba('atrasado')">ATRASADOS</button>
+    <button id="tPen" onclick="trocarAba('pendente')">PENDENTES</button>
+    <button id="tDia" onclick="trocarAba('pago')">EM DIA</button>
+</div>
 
     <div id="listaAlunos"></div>
 </div>
@@ -363,55 +364,72 @@ const firebaseConfig = {
         render();
     }
 
-    function render() {
-        const lista = $("listaAlunos"); lista.innerHTML = "";
-        const busca = $("inputBusca").value.toLowerCase();
-        const hoje = new Date(); hoje.setHours(0,0,0,0);
-        let totalAtrasos = 0;
-        let totalAlunosInadimplentes = 0;
+function render() {
+    const lista = $("listaAlunos"); lista.innerHTML = "";
+    const busca = $("inputBusca").value.toLowerCase();
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    let totalAtrasos = 0;
 
-        alunos.forEach((a, i) => {
-            const parse = d => { const [dia, mes, ano] = d.split('/'); return new Date(ano, mes-1, dia); };
-            const atr = a.parcelas.filter(p => !p.pago && parse(p.data) < hoje);
-            const pen = a.parcelas.filter(p => !p.pago && parse(p.data) >= hoje);
-            const pag = a.parcelas.filter(p => p.pago);
-            if(atr.length > 0) { totalAtrasos += atr.length; totalAlunosInadimplentes++; }
-            if (busca && !a.nome.toLowerCase().includes(busca) && !a.apelido.toLowerCase().includes(busca)) return;
-            let exibir = abaAtual === 'atrasado' ? atr : (abaAtual === 'pendente' ? pen : pag);
+    alunos.forEach((a, i) => {
+        // Se o aluno não tem parcelas, ele é considerado "NOVO"
+        const ehNovo = !a.parcelas || a.parcelas.length === 0;
 
-            if(exibir.length > 0) {
-                lista.innerHTML += `
-                <div class="aluno-item" style="border-left-color: ${atr.length ? 'var(--danger)' : 'var(--primary)'}">
-                    <div class="aluno-header" onclick="toggleAluno(${i})">
-                        <img src="${a.foto || 'https://via.placeholder.com/80'}" class="aluno-img">
-                        <div style="flex:1"><b>${a.nome}</b><br><small>${a.apelido || ''}</small></div>
-                        <div style="display:flex; gap:10px; align-items:center">
-                             <button onclick="event.stopPropagation(); verFicha(${i})" style="background:none; color:var(--warning); font-size:18px">📋</button>
-                             <button onclick="event.stopPropagation(); prepararEdicao(${i})" style="background:none; color:var(--info); font-size:18px">✏️</button>
-                             <span style="background:#333; padding:2px 8px; border-radius:10px; font-size:11px">${exibir.length}</span>
-                        </div>
+        const parse = d => { 
+            if(!d) return new Date();
+            const [dia, mes, ano] = d.split('/'); 
+            return new Date(ano, mes-1, dia); 
+        };
+
+        const atr = a.parcelas ? a.parcelas.filter(p => !p.pago && parse(p.data) < hoje) : [];
+        const pen = a.parcelas ? a.parcelas.filter(p => !p.pago && parse(p.data) >= hoje) : [];
+        const pag = a.parcelas ? a.parcelas.filter(p => p.pago) : [];
+
+        if(atr.length > 0) totalAtrasos += atr.length;
+        if (busca && !a.nome.toLowerCase().includes(busca) && !a.apelido.toLowerCase().includes(busca)) return;
+
+        // Lógica de exibição por aba
+        let mostrar = false;
+        if (abaAtual === 'novo' && ehNovo) mostrar = true;
+        if (abaAtual === 'atrasado' && !ehNovo && atr.length > 0) mostrar = true;
+        if (abaAtual === 'pendente' && !ehNovo && pen.length > 0) mostrar = true;
+        if (abaAtual === 'pago' && !ehNovo && pag.length > 0) mostrar = true;
+
+        if(mostrar) {
+            lista.innerHTML += `
+            <div class="aluno-item" style="border-left-color: ${ehNovo ? 'var(--info)' : (atr.length ? 'var(--danger)' : 'var(--primary)')}">
+                <div class="aluno-header" onclick="toggleAluno(${i})">
+                    <img src="${a.foto || 'https://via.placeholder.com/80'}" class="aluno-img">
+                    <div style="flex:1">
+                        <b>${a.nome}</b> ${ehNovo ? '<span style="background:var(--info); color:#000; font-size:9px; padding:2px 5px; border-radius:4px; margin-left:5px">NOVO</span>' : ''}<br>
+                        <small>${a.apelido || ''}</small>
                     </div>
-                    <div class="acordeon-content ${a.aberto ? 'aberto' : ''}">
-                        ${exibir.map(p => `
-                            <div class="parcela">
-                                <div><b>R$ ${a.valor}</b><br><small>${p.data}</small></div>
-                                <div style="display:flex; gap:5px">
-                                    <button class="btn" onclick="baixar(${i}, '${p.data}')">${p.pago?'↩':'✔'}</button>
-                                    <button class="btn" style="background:var(--warning)" onclick="cobrar(${i}, '${p.data}')">📱</button>
-                                    <button class="btn-danger" onclick="excluirAluno(${i})">🗑️</button>
-                                </div>
+                    <div style="display:flex; gap:10px; align-items:center">
+                         <button onclick="event.stopPropagation(); verFicha(${i})" style="background:none; color:var(--warning); font-size:18px">📋</button>
+                         <button onclick="event.stopPropagation(); prepararEdicao(${i})" style="background:none; color:var(--info); font-size:18px">✏️</button>
+                         <span style="background:#333; padding:2px 8px; border-radius:10px; font-size:11px">${ehNovo ? '!' : (abaAtual === 'atrasado' ? atr.length : (abaAtual === 'pendente' ? pen.length : pag.length))}</span>
+                    </div>
+                </div>
+                <div class="acordeon-content ${a.aberto ? 'aberto' : ''}">
+                    ${ehNovo ? 
+                        `<p style="font-size:12px; color:var(--text-dim); text-align:center">Este aluno ainda não possui mensalidades. <br><br> <button class="btn" onclick="prepararEdicao(${i})">DEFINIR MENSALIDADES</button></p>` :
+                        (abaAtual === 'atrasado' ? atr : (abaAtual === 'pendente' ? pen : pag)).map(p => `
+                        <div class="parcela">
+                            <div><b>R$ ${a.valor}</b><br><small>${p.data}</small></div>
+                            <div style="display:flex; gap:5px">
+                                <button class="btn" onclick="baixar(${i}, '${p.data}')">${p.pago?'↩':'✔'}</button>
+                                <button class="btn" style="background:var(--warning)" onclick="cobrar(${i}, '${p.data}')">📱</button>
+                                <button class="btn-danger" onclick="excluirAluno(${i})">🗑️</button>
                             </div>
-                        `).join('')}
-                    </div>
-                </div>`;
-            }
-        });
-        $("dAlunos").innerText = alunos.length;
-        $("dAtraso").innerText = totalAtrasos;
-        const perc = alunos.length > 0 ? ((totalAlunosInadimplentes / alunos.length) * 100).toFixed(1) : 0;
-        $("percInadimplencia").innerText = perc + "%";
-        gerarFin();
-    }
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+    });
+    $("dAlunos").innerText = alunos.length;
+    $("dAtraso").innerText = totalAtrasos;
+    gerarFin();
+}
 
     function verFicha(i) {
         const a = alunos[i];
@@ -448,15 +466,17 @@ const firebaseConfig = {
         });
     }
 
-    function trocarAba(aba) {
-        abaAtual = aba;
-        ['tAtr', 'tPen', 'tDia'].forEach(id => $(id).classList.remove('abaAtiva'));
-        if(aba === 'atrasado') $('tAtr').classList.add('abaAtiva');
-        if(aba === 'pendente') $('tPen').classList.add('abaAtiva');
-        if(aba === 'pago') $('tDia').classList.add('abaAtiva');
-        render();
-    }
-
+function trocarAba(aba) {
+    abaAtual = aba;
+    ['tNov', 'tAtr', 'tPen', 'tDia'].forEach(id => {
+        if($(id)) $(id).classList.remove('abaAtiva');
+    });
+    if(aba === 'novo') $('tNov').classList.add('abaAtiva');
+    if(aba === 'atrasado') $('tAtr').classList.add('abaAtiva');
+    if(aba === 'pendente') $('tPen').classList.add('abaAtiva');
+    if(aba === 'pago') $('tDia').classList.add('abaAtiva');
+    render();
+}
     function prepararEdicao(i) {
         const a = alunos[i];
         $("editIndex").value = i;
@@ -482,30 +502,47 @@ const firebaseConfig = {
         toggleAcordeon('formCadastro', 'iconForm');
     }
 
-    function salvarAluno() {
-        const idx = parseInt($("editIndex").value);
-        const n = $("nome").value, v = $("valor").value;
-        if(!n || !v) return alert("Preencha o nome e valor!");
-        if(idx === -1) {
+function salvarAluno() {
+    const idx = parseInt($("editIndex").value);
+    const n = $("nome").value, v = $("valor").value;
+    if(!n || !v) return alert("Preencha o nome e valor!");
+
+    if(idx === -1) {
+        // CADASTRO MANUAL PELO PROFESSOR (Já cria com parcelas)
+        const d = $("venc").value;
+        if(!d) return alert("Escolha uma data de vencimento!");
+        const parcelas = [];
+        let [ano, mes, dia] = d.split('-');
+        for(let i=0; i<12; i++) {
+            let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
+            parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
+        }
+        alunos.push({ nome: n, apelido: $("apelido").value, tel: $("tel").value, valor: v, foto: $("alunoFotoPreview").src, parcelas, aberto: false });
+    } else {
+        // EDIÇÃO DE ALUNO EXISTENTE OU NOVO VINDO DO LINK
+        alunos[idx].nome = n; 
+        alunos[idx].apelido = $("apelido").value;
+        alunos[idx].tel = $("tel").value; 
+        alunos[idx].valor = v;
+        alunos[idx].foto = $("alunoFotoPreview").src;
+
+        // Se o aluno veio do link (não tinha parcelas), gera agora as 12 meses
+        if(!alunos[idx].parcelas || alunos[idx].parcelas.length === 0) {
             const d = $("venc").value;
-            if(!d) return alert("Escolha uma data de vencimento!");
+            if(!d) return alert("Para gerar o carnê, escolha a data do primeiro vencimento!");
             const parcelas = [];
             let [ano, mes, dia] = d.split('-');
             for(let i=0; i<12; i++) {
                 let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
                 parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
             }
-            alunos.push({ nome: n, apelido: $("apelido").value, tel: $("tel").value, valor: v, foto: $("alunoFotoPreview").src, parcelas, aberto: false });
-        } else {
-            alunos[idx].nome = n; alunos[idx].apelido = $("apelido").value;
-            alunos[idx].tel = $("tel").value; alunos[idx].valor = v;
-            alunos[idx].foto = $("alunoFotoPreview").src;
-            cancelarEdicao();
+            alunos[idx].parcelas = parcelas;
         }
-        sincronizar();
-        ["nome", "apelido", "tel", "valor", "venc"].forEach(id => $(id).value = "");
-        $("alunoFotoPreview").src = "https://via.placeholder.com/80";
+        cancelarEdicao();
     }
+    sincronizar();
+    // Limpar campos...
+}
 
     function gerarFin() {
         let pagos = 0, pend = 0;
