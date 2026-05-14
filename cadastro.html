@@ -188,32 +188,31 @@
     const profUID = urlParams.get('ref');
 
     // Busca o nome do professor
-    async function buscarNomeProfessor() {
-        console.log("Iniciando busca para o UID:", profUID);
-        if (!profUID) {
-            document.getElementById('nomeProfessor').innerText = "Link sem referência de professor";
-            return;
-        }
 
-        try {
-            const docRef = db.collection('users').doc(profUID);
-            const doc = await docRef.get();
-            
-            if (doc.exists) {
-                const dados = doc.data();
-                if (dados.nome) {
-                    document.getElementById('nomeProfessor').innerText = "Professor: " + dados.nome;
-                } else {
-                    document.getElementById('nomeProfessor').innerText = "Nome do professor não definido";
-                }
-            } else {
-                document.getElementById('nomeProfessor').innerText = "Professor não encontrado";
-            }
-        } catch (error) {
-            console.error("Erro ao buscar professor:", error);
-            document.getElementById('nomeProfessor').innerText = "Erro de conexão";
-        }
+async function buscarNomeProfessor() {
+    if (!profUID) {
+        document.getElementById('nomeProfessor').innerText = "Link sem referência";
+        return;
     }
+
+    try {
+        const doc = await db.collection('users').doc(profUID).get();
+        
+        if (doc.exists) {
+            const dados = doc.data();
+            // Tenta buscar o nome de várias formas (nome, Nome ou apelido)
+            const nomeEncontrado = dados.nome || dados.Nome || dados.apelido || "Professor Ativo";
+            
+            document.getElementById('nomeProfessor').innerText = "Professor: " + nomeEncontrado;
+            console.log("Dados do professor carregados com sucesso!");
+        } else {
+            document.getElementById('nomeProfessor').innerText = "Professor não localizado";
+        }
+    } catch (error) {
+        console.error("Erro:", error);
+        document.getElementById('nomeProfessor').innerText = "Erro ao carregar perfil";
+    }
+}
 
     // Preview da imagem
     function previewImg(input) {
