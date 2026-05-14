@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Cadastro de Aluno - Capoeira Control</title>
     
+    <!-- Firebase Compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -167,52 +168,54 @@
 </div>
 
 <script>
- const firebaseConfig = {
-  apiKey: "AIzaSyBaR3l4VXYRIHyvcyqMco6Sy4_-eYGpR8g",
-  authDomain: "teste02-ce0d2.firebaseapp.com",
-  databaseURL: "https://teste02-ce0d2-default-rtdb.firebaseio.com",
-  projectId: "teste02-ce0d2",
-  storageBucket: "teste02-ce0d2.firebasestorage.app",
-  messagingSenderId: "389717337129",
-  appId: "1:389717337129:web:fdc718e47ff6ea73f96838",
-  measurementId: "G-NB1WHSLYFV"
-};
+    // Configurações do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBaR3l4VXYRIHyvcyqMco6Sy4_-eYGpR8g",
+        authDomain: "teste02-ce0d2.firebaseapp.com",
+        databaseURL: "https://teste02-ce0d2-default-rtdb.firebaseio.com",
+        projectId: "teste02-ce0d2",
+        storageBucket: "teste02-ce0d2.firebasestorage.app",
+        messagingSenderId: "389717337129",
+        appId: "1:389717337129:web:fdc718e47ff6ea73f96838",
+        measurementId: "G-NB1WHSLYFV"
+    };
 
+    // Inicialização
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     const urlParams = new URLSearchParams(window.location.search);
     const profUID = urlParams.get('ref');
 
-async function buscarNomeProfessor() {
-    console.log("Iniciando busca para o UID:", profUID);
-    if (!profUID) {
-        document.getElementById('nomeProfessor').innerText = "Link sem referência de professor";
-        return;
-    }
-
-    try {
-        const docRef = db.collection('users').doc(profUID);
-        const doc = await docRef.get();
-        
-        if (doc.exists) {
-            const dados = doc.data();
-            console.log("Dados encontrados:", dados);
-            if (dados.nome) {
-                document.getElementById('nomeProfessor').innerText = "Professor: " + dados.nome;
-            } else {
-                document.getElementById('nomeProfessor').innerText = "Professor encontrado, mas campo 'nome' está vazio";
-            }
-        } else {
-            console.error("Documento não existe no Firestore!");
-            document.getElementById('nomeProfessor').innerText = "Professor não cadastrado no sistema";
+    // Busca o nome do professor
+    async function buscarNomeProfessor() {
+        console.log("Iniciando busca para o UID:", profUID);
+        if (!profUID) {
+            document.getElementById('nomeProfessor').innerText = "Link sem referência de professor";
+            return;
         }
-    } catch (error) {
-        console.error("Erro detalhado do Firebase:", error);
-        document.getElementById('nomeProfessor').innerText = "Erro de permissão ou conexão";
-    }
-} 
 
+        try {
+            const docRef = db.collection('users').doc(profUID);
+            const doc = await docRef.get();
+            
+            if (doc.exists) {
+                const dados = doc.data();
+                if (dados.nome) {
+                    document.getElementById('nomeProfessor').innerText = "Professor: " + dados.nome;
+                } else {
+                    document.getElementById('nomeProfessor').innerText = "Nome do professor não definido";
+                }
+            } else {
+                document.getElementById('nomeProfessor').innerText = "Professor não encontrado";
+            }
+        } catch (error) {
+            console.error("Erro ao buscar professor:", error);
+            document.getElementById('nomeProfessor').innerText = "Erro de conexão";
+        }
+    }
+
+    // Preview da imagem
     function previewImg(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -221,11 +224,12 @@ async function buscarNomeProfessor() {
         }
     }
 
+    // Enviar formulário
     async function enviarCadastro() {
-        if(!profUID) return alert("Erro: Link inválido. Peça um novo link ao seu professor.");
+        if (!profUID) return alert("Erro: Link inválido.");
         
         const nome = document.getElementById('nome').value;
-        if(!nome) return alert("Por favor, preencha seu nome.");
+        if (!nome) return alert("Por favor, preencha seu nome.");
 
         const btn = document.querySelector('button');
         const originalText = btn.innerText;
@@ -243,24 +247,25 @@ async function buscarNomeProfessor() {
 
             const novoAluno = {
                 nome: nome,
-                apelido: document.getElementById('apelido').value,
-                nascimento: document.getElementById('nascimento').value,
+                apelido: document.getElementById('apelido').value || "",
+                nascimento: document.getElementById('nascimento').value || "",
                 sexo: document.getElementById('sexo').value,
-                tel: document.getElementById('tel').value,
-                cep: document.getElementById('cep').value,
-                cidade: document.getElementById('cidade').value,
-                bairro: document.getElementById('bairro').value,
-                reside_com: document.getElementById('reside_com').value,
-                resp_nome: document.getElementById('resp_nome').value,
-                emergencia_fone: document.getElementById('emergencia_fone').value,
-                alergia: document.getElementById('alergia').value,
-                remedio: document.getElementById('remedio').value,
-                restricao: document.getElementById('restricao').value,
+                tel: document.getElementById('tel').value || "",
+                cep: document.getElementById('cep').value || "",
+                cidade: document.getElementById('cidade').value || "",
+                bairro: document.getElementById('bairro').value || "",
+                reside_com: document.getElementById('reside_com').value || "",
+                resp_nome: document.getElementById('resp_nome').value || "",
+                emergencia_fone: document.getElementById('emergencia_fone').value || "",
+                alergia: document.getElementById('alergia').value || "",
+                remedio: document.getElementById('remedio').value || "",
+                restricao: document.getElementById('restricao').value || "",
                 autoriza_saida: document.getElementById('autoriza_saida').value,
                 foto: document.getElementById('preview').src,
                 valor: "0",
                 parcelas: [],
-                aberto: false
+                aberto: false,
+                dataCadastro: new Date().toISOString()
             };
 
             listaAlunos.push(novoAluno);
@@ -270,15 +275,15 @@ async function buscarNomeProfessor() {
             document.getElementById('sucesso').style.display = 'block';
 
         } catch (error) {
-            console.error(error);
+            console.error("Erro ao enviar:", error);
             alert("Erro ao enviar: " + error.message);
             btn.innerText = originalText;
             btn.disabled = false;
         }
     }
 
-    // Inicialização
-    buscarNomeProfessor();
+    // Chama a busca ao carregar a página
+    window.onload = buscarNomeProfessor;
 </script>
 
 </body>
