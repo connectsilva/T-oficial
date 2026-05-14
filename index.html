@@ -219,9 +219,10 @@
             <label>Apelido</label><input id="apelido">
             <label>WhatsApp</label><input id="tel" type="tel">
             <div style="display:flex; gap:10px">
-                <div style="flex:1"><label>Valor R$</label><input id="valor" type="number"></div>
-                <div style="flex:1"><label>Vencimento (Inicial)</label><input id="venc" type="date"></div>
+            <div style="flex:1"><label>Valor R$</label><input id="valor" type="number"></div>
+            <div style="flex:1"><label>Mês de Início (Dia 10 fixo)</label><input id="venc" type="date"></div>
             </div>
+
             <div style="display:flex; gap:10px; margin-top:15px">
                 <button id="btnCadastrar" class="btn" style="flex:2" onclick="salvarAluno()">CADASTRAR</button>
                 <button id="btnCancelarEdit" class="btn-danger" style="flex:1; display:none" onclick="cancelarEdicao()">CANCELAR</button>
@@ -266,7 +267,6 @@ const firebaseConfig = {
   appId: "1:389717337129:web:fdc718e47ff6ea73f96838",
   measurementId: "G-NB1WHSLYFV"
 };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -507,41 +507,53 @@ function salvarAluno() {
     const n = $("nome").value, v = $("valor").value;
     if(!n || !v) return alert("Preencha o nome e valor!");
 
-    if(idx === -1) {
-        // CADASTRO MANUAL PELO PROFESSOR (Já cria com parcelas)
-        const d = $("venc").value;
-        if(!d) return alert("Escolha uma data de vencimento!");
+    // Função interna para gerar as 12 parcelas fixas no dia 10
+    const gerarParcelasFixas = (dataBase) => {
         const parcelas = [];
-        let [ano, mes, dia] = d.split('-');
+        let [ano, mes, dia] = dataBase.split('-');
+        // Forçamos o dia para 10, independente do que foi selecionado no calendário
+        dia = "10"; 
+        
         for(let i=0; i<12; i++) {
-            let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
+            let dt = new Date(ano, parseInt(mes)-1 + i, 10);
+            // Ajuste para evitar que o JS pule meses em viradas de ano
+            dt.setDate(10); 
             parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
         }
-        alunos.push({ nome: n, apelido: $("apelido").value, tel: $("tel").value, valor: v, foto: $("alunoFotoPreview").src, parcelas, aberto: false });
+        return parcelas;
+    };
+
+    if(idx === -1) {
+        // Cadastro Manual
+        const d = $("venc").value;
+        if(!d) return alert("Escolha o mês de início!");
+        const parcelas = gerarParcelasFixas(d);
+        alunos.push({ 
+            nome: n, 
+            apelido: $("apelido").value, 
+            tel: $("tel").value, 
+            valor: v, 
+            foto: $("alunoFotoPreview").src, 
+            parcelas, 
+            aberto: false 
+        });
     } else {
-        // EDIÇÃO DE ALUNO EXISTENTE OU NOVO VINDO DO LINK
+        // Edição ou Aluno vindo do Link
         alunos[idx].nome = n; 
         alunos[idx].apelido = $("apelido").value;
         alunos[idx].tel = $("tel").value; 
         alunos[idx].valor = v;
         alunos[idx].foto = $("alunoFotoPreview").src;
 
-        // Se o aluno veio do link (não tinha parcelas), gera agora as 12 meses
+        // Se for um aluno novo (sem parcelas), gera o carnê no dia 10
         if(!alunos[idx].parcelas || alunos[idx].parcelas.length === 0) {
             const d = $("venc").value;
-            if(!d) return alert("Para gerar o carnê, escolha a data do primeiro vencimento!");
-            const parcelas = [];
-            let [ano, mes, dia] = d.split('-');
-            for(let i=0; i<12; i++) {
-                let dt = new Date(ano, mes-1, dia); dt.setMonth(dt.getMonth() + i);
-                parcelas.push({ data: dt.toLocaleDateString('pt-BR'), pago: false });
-            }
-            alunos[idx].parcelas = parcelas;
+            if(!d) return alert("Escolha o mês do primeiro pagamento!");
+            alunos[idx].parcelas = gerarParcelasFixas(d);
         }
         cancelarEdicao();
     }
     sincronizar();
-    // Limpar campos...
 }
 
     function gerarFin() {
